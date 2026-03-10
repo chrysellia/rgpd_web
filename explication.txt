@@ -1,0 +1,31 @@
+Bibliothèques Python utilisées
+Pour l'analyse de texte (préservation du sens):
+
+spaCy - Analyse contextuelle sans perte de sens
+PyPDF2 - Extraction de texte des PDFs
+pdfplumber - Alternative pour PDFs complexes
+
+Pour l'interface (optionnel pour WinDev):
+
+Streamlit - Interface web (pas nécessaire pour WinDev)
+
+Pour l'IA:
+
+Ollama/requests - Modèle IA local gratuit
+anthropic - API Claude (payant)
+
+Ce que spaCy fait avec les acronymes:
+
+✅ Les garde INTACTS (pas de séparation en lettres)
+✅ Les identifie comme noms propres (PROPN)
+✅ Détecte souvent comme entités (ORG, LOC, etc.)
+✅ Préserve leur contexte complet
+✅ Maintient leurs relations syntaxiques
+
+Ce que spaCy fait avec les articles:
+
+✅ Les CONSERVE dans les groupes nominaux
+✅ Les MARQUE comme stop-words (pour filtrage optionnel)
+✅ Maintient leur lien avec le nom qu'ils déterminent
+✅ Permet de les inclure OU exclure selon le besoin
+✅ Ne les supprime JAMAIS de force

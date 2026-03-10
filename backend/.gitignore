@@ -1,0 +1,19 @@
+# Environnement virtuel
+venv/
+env/
+
+# Secrets
+.env
+*.env
+
+# Base vectorielle
+chroma_db/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Fichiers temporaires
+*.log
+init_db.py
