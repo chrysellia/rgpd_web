@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Shield, Mail, Lock, AlertCircle } from 'lucide-react';
 
@@ -108,6 +108,21 @@ export default function LoginPage() {
             >
               {loading ? 'Connexion...' : 'Se connecter'}
             </button>
+
+            <div className="flex justify-between items-center mt-4">
+              <Link
+                to="/forgot-password"
+                className="text-sm text-gray-400 hover:text-blue-400 transition-colors"
+              >
+                Mot de passe oublié ?
+              </Link>
+              <Link
+                to="/register"
+                className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
+              >
+                Créer un compte
+              </Link>
+            </div>
           </form>
         </div>
       </div>

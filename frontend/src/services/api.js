@@ -39,6 +39,15 @@ export const authService = {
   },
   register: (email, password) =>
     api.post('/auth/register', { email, password }),
+
+  forgotPassword: (email) =>
+    api.post('/auth/forgot-password', { email }),
+
+  resetPassword: (token, newPassword) =>
+    api.post('/auth/reset-password', {
+      token,
+      new_password: newPassword
+    }),
 };
 
 //Ajout d'historique des conversations et de domaine pour la RGPD
