@@ -41,14 +41,19 @@ export const authService = {
     api.post('/auth/register', { email, password }),
 };
 
+//Ajout d'historique des conversations et de domaine pour la RGPD
 export const rgpdService = {
-  chat: (question, historique = []) =>
-    api.post('/rgpd/chat', { question, historique }),
+  chat: (question, historique = [], domaine = 'general') =>
+    api.post('/rgpd/chat', { question, historique, domaine }),
+
+  getHistorique: () =>
+    api.get('/rgpd/historique'),
 
   analyserTraitement: (traitement) =>
     api.post('/rgpd/analyser-traitement', traitement),
 
-  status: () => api.get('/rgpd/status'),
+  status: () =>
+    api.get('/rgpd/status'),
 };
 
 export default api;
