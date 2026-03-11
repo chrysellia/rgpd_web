@@ -2,7 +2,8 @@ import { useState, useRef, useEffect } from 'react';
 import { rgpdService } from '../services/api';
 import Navbar from '../components/Navbar';
 import { Send, Bot, User, FileText, Loader,
-         History, ChevronDown, ChevronUp } from 'lucide-react';
+         History, ChevronDown, ChevronUp,
+         Paperclip, X, File } from 'lucide-react';
 
 const DOMAINES = [
   { value: 'general', label: '🌐 Général', desc: 'Toutes organisations' },
@@ -57,10 +58,11 @@ const SUGGESTIONS = {
 };
 
 export default function ChatPage() {
+  // ✅ Tous les hooks sont ICI — dans le corps du composant
   const [messages, setMessages] = useState([
     {
       role: 'assistant',
-      content: 'Bonjour ! Je suis votre assistant RGPD. Sélectionnez votre domaine d\'activité pour des réponses adaptées, puis posez vos questions.'
+      content: "Bonjour ! Je suis votre assistant RGPD. Sélectionnez votre domaine d'activité pour des réponses adaptées, puis posez vos questions."
     }
   ]);
   const [input, setInput] = useState('');
@@ -69,7 +71,9 @@ export default function ChatPage() {
   const [showHistorique, setShowHistorique] = useState(false);
   const [historique, setHistorique] = useState([]);
   const [loadingHistorique, setLoadingHistorique] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
   const bottomRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -97,16 +101,22 @@ export default function ChatPage() {
     if (!question || loading) return;
 
     setInput('');
-    const newMessages = [...messages, { role: 'user', content: question }];
+    const newMessages = [...messages, {
+      role: 'user',
+      content: question,
+      filename: selectedFile?.name
+    }];
     setMessages(newMessages);
     setLoading(true);
 
     try {
-      const response = await rgpdService.chat(
-        question,
-        newMessages.slice(-6),
-        domaine
-      );
+      let response;
+      if (selectedFile) {
+        response = await rgpdService.chatWithFile(question, domaine, selectedFile);
+        setSelectedFile(null);
+      } else {
+        response = await rgpdService.chat(question, newMessages.slice(-6), domaine);
+      }
       const { answer, sources } = response.data;
       setMessages(prev => [...prev, {
         role: 'assistant',
@@ -116,7 +126,7 @@ export default function ChatPage() {
     } catch (err) {
       setMessages(prev => [...prev, {
         role: 'assistant',
-        content: 'Erreur de communication avec l\'agent.'
+        content: "Erreur de communication avec l'agent."
       }]);
     } finally {
       setLoading(false);
@@ -148,7 +158,7 @@ export default function ChatPage() {
                        border border-gray-700 transition-colors"
           >
             <History className="w-4 h-4" />
-            Historique
+            {loadingHistorique ? 'Chargement...' : 'Historique'}
             {showHistorique
               ? <ChevronUp className="w-4 h-4" />
               : <ChevronDown className="w-4 h-4" />}
@@ -167,14 +177,14 @@ export default function ChatPage() {
             ) : (
               <div className="space-y-3">
                 {historique.map((h) => (
-                  <div key={h.id}
+                  <div
+                    key={h.id}
                     className="border-b border-gray-700 pb-3 cursor-pointer
-                               hover:bg-gray-750 rounded p-2"
+                               hover:bg-gray-700 rounded p-2 transition-colors"
                     onClick={() => {
                       setMessages([
                         { role: 'user', content: h.question },
-                        { role: 'assistant', content: h.answer,
-                          sources: h.sources }
+                        { role: 'assistant', content: h.answer, sources: h.sources }
                       ]);
                       setShowHistorique(false);
                     }}
@@ -251,6 +261,13 @@ export default function ChatPage() {
                   ? 'bg-blue-600 text-white rounded-br-sm'
                   : 'bg-gray-800 text-gray-100 rounded-bl-sm border border-gray-700'
               }`}>
+                {/* Indicateur fichier */}
+                {msg.filename && (
+                  <div className="flex items-center gap-1 mb-2 text-blue-200 text-xs">
+                    <Paperclip className="w-3 h-3" />
+                    {msg.filename}
+                  </div>
+                )}
                 <p className="whitespace-pre-wrap text-sm leading-relaxed">
                   {msg.content}
                 </p>
@@ -278,6 +295,7 @@ export default function ChatPage() {
               )}
             </div>
           ))}
+
           {loading && (
             <div className="flex gap-3 justify-start">
               <div className="w-8 h-8 bg-blue-600 rounded-full flex
@@ -296,16 +314,47 @@ export default function ChatPage() {
           <div ref={bottomRef} />
         </div>
 
-        {/* Input */}
+        {/* Fichier sélectionné */}
+        {selectedFile && (
+          <div className="flex items-center gap-2 px-4 py-2 bg-blue-900/30
+                          border border-blue-500/30 rounded-xl">
+            <File className="w-4 h-4 text-blue-400" />
+            <span className="text-blue-300 text-sm flex-1 truncate">
+              {selectedFile.name}
+            </span>
+            <button onClick={() => setSelectedFile(null)}>
+              <X className="w-4 h-4 text-gray-400 hover:text-white" />
+            </button>
+          </div>
+        )}
+
+        {/* Zone de saisie */}
         <form onSubmit={handleSubmit} className="flex gap-3">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".pdf,.txt,.csv"
+            className="hidden"
+            onChange={(e) => setSelectedFile(e.target.files[0])}
+          />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="px-4 py-3 bg-gray-800 hover:bg-gray-700 border
+                       border-gray-700 rounded-xl transition-colors"
+            title="Joindre un fichier PDF, TXT ou CSV"
+          >
+            <Paperclip className="w-5 h-5 text-gray-400" />
+          </button>
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder={`Posez votre question RGPD ${
-              domaine !== 'general'
-                ? `(domaine: ${DOMAINES.find(d => d.value === domaine)?.label})`
-                : ''
-            }...`}
+            placeholder={selectedFile
+              ? `Posez une question sur "${selectedFile.name}"...`
+              : domaine !== 'general'
+                ? `Question RGPD (${DOMAINES.find(d => d.value === domaine)?.label})...`
+                : 'Posez votre question RGPD...'
+            }
             className="flex-1 px-4 py-3 bg-gray-800 border border-gray-700
                        rounded-xl text-white placeholder-gray-400
                        focus:outline-none focus:border-blue-500"
@@ -319,6 +368,7 @@ export default function ChatPage() {
             <Send className="w-5 h-5 text-white" />
           </button>
         </form>
+
       </div>
     </div>
   );

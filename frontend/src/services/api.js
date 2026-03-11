@@ -46,6 +46,16 @@ export const rgpdService = {
   chat: (question, historique = [], domaine = 'general') =>
     api.post('/rgpd/chat', { question, historique, domaine }),
 
+  chatWithFile: (question, domaine, file) => {
+    const formData = new FormData();
+    formData.append('question', question);
+    formData.append('domaine', domaine);
+    formData.append('file', file);
+    return api.post('/rgpd/chat-with-file', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+  },
+
   getHistorique: () =>
     api.get('/rgpd/historique'),
 
