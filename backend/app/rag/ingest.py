@@ -1,19 +1,36 @@
-"""
-Lance ce script UNE FOIS pour indexer tes PDFs RGPD.
-Commande : python app/rag/ingest.py
-"""
+ # Indexation des PDFs RGPD.
+
+# Lance ce script UNE FOIS pour indexer tes PDFs RGPD.
+# Commande : python app/rag/ingest.py
+
 import os
 from langchain_community.document_loaders import PyPDFLoader, DirectoryLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_community.embeddings import OllamaEmbeddings
-from langchain_community.vectorstores import Chroma
+from langchain_ollama import OllamaEmbeddings
+from langchain_chroma import Chroma
 from dotenv import load_dotenv
 
 load_dotenv()
 
 DOCUMENTS_PATH = os.getenv("DOCUMENTS_PATH", "./documents")
 CHROMA_DB_PATH = os.getenv("CHROMA_DB_PATH", "./chroma_db")
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "mistral")
+OLLAMA_EMBED_MODEL = os.getenv("OLLAMA_EMBED_MODEL", "nomic-embed-text")
+
+def enrich_chunks(chunks):
+    enriched_chunks = []
+    for chunk in chunks:
+        source = chunk.metadata.get("source", "Document RGPD")
+        source_name = os.path.basename(source)
+        page = chunk.metadata.get("page")
+        page_number = page + 1 if isinstance(page, int) else page
+        header = f"Source: {source_name}"
+        if page_number is not None:
+            header += f" | Page: {page_number}"
+        chunk.page_content = f"{header}\n\n{chunk.page_content}"
+        chunk.metadata["source_name"] = source_name
+        chunk.metadata["page_number"] = page_number
+        enriched_chunks.append(chunk)
+    return enriched_chunks
 
 def ingest_documents():
     print("Chargement des documents RGPD...")
@@ -35,17 +52,18 @@ def ingest_documents():
     # Découpe en fragments de 512 tokens
     # avec chevauchement de 50 tokens pour préserver le contexte
     splitter = RecursiveCharacterTextSplitter(
-        chunk_size=512,
-        chunk_overlap=50,
+        chunk_size=800,
+        chunk_overlap=100,
         separators=["\n\n", "\n", ".", " "]
     )
     chunks = splitter.split_documents(documents)
+    chunks = enrich_chunks(chunks)
     print(f"{len(chunks)} fragments créés")
 
     # Vectorise avec Ollama (modèle local)
     print("Vectorisation en cours (peut prendre quelques minutes)...")
     embeddings = OllamaEmbeddings(
-        model=OLLAMA_MODEL,
+        model=OLLAMA_EMBED_MODEL,
         base_url=os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
     )
 

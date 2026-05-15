@@ -50,6 +50,7 @@ def chat(
         "question": req.question,
         "answer": result["answer"],
         "sources": result["sources"],
+        "source_scores": result.get("source_scores", []),
         "user": current_user.email
     }
 

@@ -3,7 +3,7 @@ import { rgpdService } from '../services/api';
 import Navbar from '../components/Navbar';
 import { Send, Bot, User, FileText, Loader,
          History, ChevronDown, ChevronUp,
-         Paperclip, X, File } from 'lucide-react';
+         Paperclip, X, File, Copy, Check } from 'lucide-react';
 
 const DOMAINES = [
   { value: 'general', label: '🌐 Général', desc: 'Toutes organisations' },
@@ -72,8 +72,10 @@ export default function ChatPage() {
   const [historique, setHistorique] = useState([]);
   const [loadingHistorique, setLoadingHistorique] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
+  const [copiedIdx, setCopiedIdx] = useState(null);
   const bottomRef = useRef(null);
   const fileInputRef = useRef(null);
+  const textareaRef = useRef(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -117,11 +119,12 @@ export default function ChatPage() {
       } else {
         response = await rgpdService.chat(question, newMessages.slice(-6), domaine);
       }
-      const { answer, sources } = response.data;
+      const { answer, sources, source_scores } = response.data;
       setMessages(prev => [...prev, {
         role: 'assistant',
         content: answer,
-        sources: sources
+        sources: sources,
+        source_scores: source_scores
       }]);
     } catch (err) {
       setMessages(prev => [...prev, {
@@ -136,6 +139,19 @@ export default function ChatPage() {
   const handleSubmit = (e) => {
     e.preventDefault();
     sendMessage();
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  };
+
+  const copyToClipboard = (text, idx) => {
+    navigator.clipboard.writeText(text);
+    setCopiedIdx(idx);
+    setTimeout(() => setCopiedIdx(null), 2000);
   };
 
   const suggestions = SUGGESTIONS[domaine] || SUGGESTIONS.general;
@@ -284,13 +300,38 @@ export default function ChatPage() {
                         {src}
                       </span>
                     ))}
+                    {msg.source_scores?.length > 0 && (
+                      <div className="mt-2">
+                        <p className="text-xs text-gray-400 mb-1">Indice de similarité :</p>
+                        <div className="flex flex-wrap gap-1">
+                          {msg.source_scores.map((item, j) => (
+                            <span key={j}
+                              className="inline-block text-xs bg-gray-700
+                                         text-green-300 rounded px-2 py-1 mr-1 mt-1">
+                              {item.source} : {item.score.toFixed(3)}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
               {msg.role === 'user' && (
-                <div className="w-8 h-8 bg-gray-600 rounded-full flex
-                                items-center justify-center shrink-0 mt-1">
-                  <User className="w-5 h-5 text-white" />
+                <div className="flex flex-col items-center gap-1 shrink-0 mt-1">
+                  <div className="w-8 h-8 bg-gray-600 rounded-full flex
+                                  items-center justify-center">
+                    <User className="w-5 h-5 text-white" />
+                  </div>
+                  <button
+                    onClick={() => copyToClipboard(msg.content, i)}
+                    className="p-1 rounded hover:bg-gray-700 transition-colors"
+                    title="Copier la question"
+                  >
+                    {copiedIdx === i
+                      ? <Check className="w-3.5 h-3.5 text-green-400" />
+                      : <Copy className="w-3.5 h-3.5 text-gray-500 hover:text-gray-300" />}
+                  </button>
                 </div>
               )}
             </div>
@@ -346,18 +387,27 @@ export default function ChatPage() {
           >
             <Paperclip className="w-5 h-5 text-gray-400" />
           </button>
-          <input
+          <textarea
+            ref={textareaRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
             placeholder={selectedFile
               ? `Posez une question sur "${selectedFile.name}"...`
               : domaine !== 'general'
                 ? `Question RGPD (${DOMAINES.find(d => d.value === domaine)?.label})...`
                 : 'Posez votre question RGPD...'
             }
+            rows={1}
+            style={{ maxHeight: '120px' }}
+            onInput={(e) => {
+              e.target.style.height = 'auto';
+              e.target.style.height = e.target.scrollHeight + 'px';
+            }}
             className="flex-1 px-4 py-3 bg-gray-800 border border-gray-700
                        rounded-xl text-white placeholder-gray-400
-                       focus:outline-none focus:border-blue-500"
+                       focus:outline-none focus:border-blue-500
+                       resize-none overflow-y-auto"
           />
           <button
             type="submit"
